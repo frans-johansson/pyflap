@@ -14,7 +14,7 @@ FONT_SIZE = 48
 
 
 def spawn_pipe() -> list[pygame.Rect]:
-    height_lower = random.uniform(0, 1)
+    height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
     lower = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT * height_lower)
     lower.midbottom = (WIDTH, HEIGHT)
     upper = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT - lower.height - PIPE_GAP)
@@ -59,7 +59,7 @@ class GameState:
 def main():
     pygame.init()
     pygame.display.set_caption(title=WINDOW_TITLE)
-    screen = pygame.display.set_mode(size=(WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), 0)
     clock = pygame.time.Clock()
     running = True
     font = pygame.font.Font(None, size=FONT_SIZE)
