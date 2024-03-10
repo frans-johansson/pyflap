@@ -1,6 +1,6 @@
 import pygame
 import random
-import os
+import pathlib
 
 WINDOW_TITLE = "Pyflap"
 (WIDTH, HEIGHT) = (1280, 720)
@@ -11,13 +11,14 @@ PIPE_WIDTH = 100
 BIRD_SIZE = 50
 BIRD_GRAVITY = 0.05
 BIRD_BOOST = 20
+BIRD_ANIMATION_DELAY = 100
 FONT_SIZE = 48
 
 UPDATE_SPRITE_EVENT = pygame.USEREVENT + 1
-ASSETS = "./assets"
+ASSETS = pathlib.Path("./assets")
 
 
-BIRD_IMAGES = [pygame.transform.scale(pygame.image.load(os.path.abspath(f"{ASSETS}/{file}")), (BIRD_SIZE, BIRD_SIZE)) for file in os.listdir(ASSETS)]
+BIRD_IMAGES = [pygame.transform.scale(pygame.image.load(file), (BIRD_SIZE, BIRD_SIZE)) for file in ASSETS.glob('bird/*.png')]
 
 def spawn_pipe() -> list[pygame.Rect]:
     height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
@@ -71,7 +72,7 @@ def main():
     running = True
     font = pygame.font.Font(None, size=FONT_SIZE)
 
-    pygame.time.set_timer(UPDATE_SPRITE_EVENT, 100)
+    pygame.time.set_timer(UPDATE_SPRITE_EVENT, BIRD_ANIMATION_DELAY)
 
     game_state = GameState()
 
