@@ -30,9 +30,7 @@ def spawn_pipe() -> list[pygame.Rect]:
 
 
 def despawn_pipes(pipes: list[pygame.Rect]) -> list[pygame.Rect]:
-    return [
-        pipe for pipe in pipes if pipe.right > 0
-    ]
+    return [pipe for pipe in pipes if pipe.right > 0]
 
 
 def bird_has_crashed(pipes: list[pygame.Rect], bird: pygame.Rect) -> bool:
@@ -55,13 +53,12 @@ class GameState:
     def reset(self):
         self.bird = pygame.Rect(0, 0, BIRD_SIZE, BIRD_SIZE)
         self.bird.center = (WIDTH // 3, HEIGHT // 2)
-        self.pipes = spawn_pipe()  # TODO: Can accidentally spawn walls 
+        self.pipes = spawn_pipe()
         self.dt = 0
         self.bird_velocity = 0.0
         self.pipe_spawn_countup = 0.0
         self.score = 0
         self.bird_frame = 0
-
 
 
 def main():
