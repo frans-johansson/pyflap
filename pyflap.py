@@ -1,5 +1,7 @@
+import copy
 import pathlib
 import random
+import typing
 
 import pygame
 
@@ -158,3 +160,23 @@ class Game:
 
         pygame.display.flip()
 
+
+class Simulation:
+    def __init__(self, state: State) -> None:
+        self.state = state
+
+    @staticmethod
+    def input_key(keycode) -> bool:
+        event = pygame.event.Event(pygame.KEYDOWN, key=keycode)
+        return pygame.event.post(event)
+    
+    def run(self, num_frames: int) -> typing.Generator:
+        for _ in range(num_frames):
+            self.update()
+            yield copy.deepcopy(self.state)
+    
+    def update(self) -> None:
+        self.state.update(1000 // 60)
+    
+    def render(self) -> None:
+        pass
