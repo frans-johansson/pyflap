@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 
 WINDOW_TITLE = "Pyflap"
 (WIDTH, HEIGHT) = (1280, 720)
@@ -12,6 +13,11 @@ BIRD_GRAVITY = 0.05
 BIRD_BOOST = 20
 FONT_SIZE = 48
 
+UPDATE_SPRITE_EVENT = pygame.USEREVENT + 1
+ASSETS = "./assets"
+
+
+BIRD_IMAGES = [pygame.transform.scale(pygame.image.load(os.path.abspath(f"{ASSETS}/{file}")), (BIRD_SIZE, BIRD_SIZE)) for file in os.listdir(ASSETS)]
 
 def spawn_pipe() -> list[pygame.Rect]:
     height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
@@ -53,6 +59,7 @@ class GameState:
         self.bird_velocity = 0.0
         self.pipe_spawn_countup = 0.0
         self.score = 0
+        self.bird_frame = 0
 
 
 
@@ -63,6 +70,8 @@ def main():
     clock = pygame.time.Clock()
     running = True
     font = pygame.font.Font(None, size=FONT_SIZE)
+
+    pygame.time.set_timer(UPDATE_SPRITE_EVENT, 100)
 
     game_state = GameState()
 
@@ -78,6 +87,9 @@ def main():
                 if event.key == pygame.K_SPACE:
                     game_state.bird_velocity = -BIRD_BOOST
 
+            if event.type == UPDATE_SPRITE_EVENT:
+                game_state.bird_frame = (game_state.bird_frame + 1) % len(BIRD_IMAGES)
+
         screen.fill("lightblue")
 
         game_state.bird_velocity += BIRD_GRAVITY * game_state.dt
@@ -88,7 +100,8 @@ def main():
             game_state.bird.top = 0
             game_state.bird_velocity = 0
 
-        pygame.draw.rect(surface=screen, color="orange", rect=game_state.bird)
+
+        screen.blit(BIRD_IMAGES[game_state.bird_frame], game_state.bird)
 
         for pipe in game_state.pipes:
             pipe.move_ip(-PIPE_SCROLL_VELOCITY * game_state.dt, 0)
