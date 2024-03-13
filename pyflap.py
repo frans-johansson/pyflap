@@ -158,27 +158,3 @@ class Game:
 
         pygame.display.flip()
 
-
-def spawn_pipe() -> list[pygame.Rect]:
-    height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
-    lower = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT * height_lower)
-    lower.midbottom = (WIDTH, HEIGHT)
-    upper = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT - lower.height - PIPE_GAP)
-    upper.midtop = (WIDTH, 0)
-    return [lower, upper]
-
-
-def despawn_pipes(pipes: list[pygame.Rect]) -> list[pygame.Rect]:
-    return [pipe for pipe in pipes if pipe.right > 0]
-
-
-def bird_has_crashed(pipes: list[pygame.Rect], bird: pygame.Rect) -> bool:
-    # Enable this if you are a masochist c:
-    # if bird.bottom > HEIGHT or bird.top < 0:
-    #     return True
-
-    for pipe in pipes:
-        if pipe.colliderect(bird):
-            return True
-
-    return False
