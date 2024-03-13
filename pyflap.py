@@ -25,6 +25,30 @@ BIRD_IMAGES = [
     for file in ASSETS.glob("bird/*.png")
 ]
 
+class Bird():
+    def __init__(self, rect: pygame.Rect) -> None:
+        self.rect = rect
+        self.velocity = 0.0
+        self.sprite_frame = 0
+
+    def update(self, dt: int) -> None:
+        self.velocity += BIRD_GRAVITY * dt
+        self.rect.move_ip(0, self.velocity)
+        if self.rect.bottom > HEIGHT:
+            self.rect.bottom = HEIGHT
+        if self.rect.top < 0:
+            self.rect.top = 0
+            self.velocity = 0
+
+    def render(self, screen: pygame.Surface) -> None:
+        screen.blit(BIRD_IMAGES[self.sprite_frame], self.rect)
+
+    @classmethod
+    def spawn(cls) -> "Bird":
+        bird = pygame.Rect(0, 0, BIRD_SIZE, BIRD_SIZE)
+        bird.center = (WIDTH // 3, HEIGHT // 2)
+        return cls(bird)
+
 
 class Pipes:
     def __init__(self, upper: pygame.Rect, lower: pygame.Rect) -> None:
@@ -35,7 +59,7 @@ class Pipes:
         self.upper.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
         self.lower.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
 
-    def render(self, screen: pygame.SurfaceType):
+    def render(self, screen: pygame.Surface):
         pygame.draw.rect(surface=screen, color="darkgreen", rect=self.upper)
         pygame.draw.rect(surface=screen, color="darkgreen", rect=self.lower)
 
@@ -62,16 +86,13 @@ class State:
         self.best_score = 0
 
     def reset(self):
-        self.bird = pygame.Rect(0, 0, BIRD_SIZE, BIRD_SIZE)
-        self.bird.center = (WIDTH // 3, HEIGHT // 2)
+        self.bird = Bird.spawn()
         self.pipes = [Pipes.spawn()]
-        self.bird_velocity = 0.0
         self.pipe_spawn_countup = 0.0
         self.score = 0
-        self.bird_frame = 0
         self.running = True
 
-    def update(self, dt):
+    def update(self, dt: int):
         # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -82,18 +103,12 @@ class State:
                     self.running = False
 
                 if event.key == pygame.K_SPACE:
-                    self.bird_velocity = -BIRD_BOOST
+                    self.bird.velocity = -BIRD_BOOST
 
             if event.type == UPDATE_SPRITE_EVENT:
-                self.bird_frame = (self.bird_frame + 1) % len(BIRD_IMAGES)
-
-        self.bird_velocity += BIRD_GRAVITY * dt
-        self.bird.move_ip(0, self.bird_velocity)
-        if self.bird.bottom > HEIGHT:
-            self.bird.bottom = HEIGHT
-        if self.bird.top < 0:
-            self.bird.top = 0
-            self.bird_velocity = 0
+                self.bird.sprite_frame = (self.bird.sprite_frame + 1) % len(BIRD_IMAGES)
+        
+        self.bird.update(dt)
 
         for pipe in self.pipes:
             pipe.update(dt)
@@ -106,7 +121,7 @@ class State:
 
         self.pipes = Pipes.despawn(self.pipes)
 
-        if any(pipe.check_collision(self.bird) for pipe in self.pipes):
+        if any(pipe.check_collision(self.bird.rect) for pipe in self.pipes):
             self.best_score = max(self.best_score, self.score)
             self.reset()
 
@@ -129,7 +144,7 @@ class Game:
     def render(self) -> None:
         self.screen.fill("lightblue")
 
-        self.screen.blit(BIRD_IMAGES[self.state.bird_frame], self.state.bird)
+        self.state.bird.render(self.screen) 
 
         for pipe in self.state.pipes:
             pipe.render(self.screen)
