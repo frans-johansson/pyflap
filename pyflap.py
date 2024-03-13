@@ -59,7 +59,7 @@ class Pipes:
         self.upper.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
         self.lower.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
 
-    def render(self, screen: pygame.Surface):
+    def render(self, screen: pygame.Surface) -> None:
         pygame.draw.rect(surface=screen, color="darkgreen", rect=self.upper)
         pygame.draw.rect(surface=screen, color="darkgreen", rect=self.lower)
 
@@ -81,18 +81,18 @@ class Pipes:
 
 
 class State:
-    def __init__(self):
+    def __init__(self) -> None:
         self.reset()
         self.best_score = 0
 
-    def reset(self):
+    def reset(self) -> None:
         self.bird = Bird.spawn()
         self.pipes = [Pipes.spawn()]
         self.pipe_spawn_countup = 0.0
         self.score = 0
         self.running = True
 
-    def update(self, dt: int):
+    def update(self, dt: int) -> None:
         # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
