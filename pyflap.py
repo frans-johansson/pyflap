@@ -25,7 +25,7 @@ BIRD_IMAGES = [
     for file in ASSETS.glob("bird/*.png")
 ]
 
-class Bird():
+class Bird:
     def __init__(self, rect: pygame.Rect) -> None:
         self.rect = rect
         self.velocity = 0.0
@@ -77,7 +77,7 @@ class Pipes:
 
     @staticmethod
     def despawn(pipes: list["Pipes"]) -> list["Pipes"]:
-        return [pipe for pipe in pipes if pipe.lower.right > 0]
+        return [pipe for pipe in pipes if pipe.upper.right > 0 or pipe.lower.right > 0]
 
 
 class State:
