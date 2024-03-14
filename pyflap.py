@@ -91,6 +91,15 @@ class GameState(enum.Enum):
 
 
 class State:
+    """
+    Member fields:
+    - best_score
+    - game_state
+    - bird
+    - pipes
+    - pipe_spawn_countup
+    - score
+    """
     def __init__(self) -> None:
         self.best_score = 0
         self.game_state = GameState.WELCOME
@@ -144,6 +153,7 @@ class State:
         self.pipes = Pipes.despawn(self.pipes)
 
         if any(pipe.check_collision(self.bird.rect) for pipe in self.pipes):
+            print("You died")
             self.game_state = GameState.GAME_OVER
 
 
@@ -200,22 +210,45 @@ class Game:
         self.screen.fill("red")
 
 
+def _runner(generator):
+    def _inner(*args, **kwargs):
+        gen = generator(*args, **kwargs)
+        return next(gen), gen
+    return _inner
+
+
 class Simulation:
     def __init__(self, state: State) -> None:
         self.state = state
 
     @staticmethod
     def input_key(keycode) -> bool:
+        print("Received key:", keycode)
         event = pygame.event.Event(pygame.KEYDOWN, key=keycode)
         return pygame.event.post(event)
     
-    def run(self, num_frames: int) -> typing.Generator:
+    @_runner
+    def run_until_state(self, target_state: GameState, max_frames: int) -> typing.Generator: 
+        for _ in range(max_frames):
+            self.update()
+            input_callback = yield copy.deepcopy(self.state)
+            if input_callback is not None:
+                input_callback()
+            if self.state.game_state == target_state:
+                break
+
+    @_runner
+    def run_fixed(self, num_frames: int) -> typing.Generator:
         for _ in range(num_frames):
             self.update()
-            yield copy.deepcopy(self.state)
+            input_callback = yield copy.deepcopy(self.state)
+            if input_callback is not None:
+                input_callback()
     
     def update(self) -> None:
+        self.state.handle_events()
         self.state.update(1000 // 60)
     
     def render(self) -> None:
         pass
+
