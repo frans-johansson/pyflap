@@ -1,5 +1,3 @@
-import itertools
-
 import pygame
 
 import pyflap
@@ -14,8 +12,7 @@ def main():
     print("Initial state:", initial_state)
 
     # Since the runners are generators that accept callback values
-    # we inject input by invoking `send` with a lambda that in turn
-    # calls the `input_key` helper function
+    # we inject input by invoking `send` with the desired keycode input
     runner.send(pygame.K_RETURN)
 
     # The runner will otherwise act as a normal iterator yielding frames
