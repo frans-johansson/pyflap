@@ -2,6 +2,7 @@ import copy
 import pathlib
 import random
 import typing
+import enum
 
 import pygame
 
@@ -82,34 +83,53 @@ class Pipes:
         return [pipe for pipe in pipes if pipe.upper.right > 0 or pipe.lower.right > 0]
 
 
+class GameState(enum.Enum):
+    WELCOME = enum.auto()
+    RUNNING = enum.auto()
+    GAME_OVER = enum.auto()
+    SHOULD_QUIT = enum.auto()
+
+
 class State:
     def __init__(self) -> None:
-        self.reset()
         self.best_score = 0
+        self.game_state = GameState.WELCOME
+        self.init()
 
-    def reset(self) -> None:
+    def init(self) -> None:
         self.bird = Bird.spawn()
         self.pipes = [Pipes.spawn()]
         self.pipe_spawn_countup = 0.0
         self.score = 0
-        self.running = True
 
-    def update(self, dt: int) -> None:
-        # Handle events
+    def start(self) -> None:
+        self.best_score = max(self.best_score, self.score)
+        self.game_state = GameState.RUNNING
+        self.init()
+
+    @property
+    def should_quit(self) -> bool:
+        return self.game_state == GameState.SHOULD_QUIT
+
+    def handle_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = False
+                self.game_state = GameState.SHOULD_QUIT
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
+                    self.game_state = GameState.SHOULD_QUIT
+
+                if event.key == pygame.K_RETURN:
+                    self.start()
 
                 if event.key == pygame.K_SPACE:
                     self.bird.velocity = -BIRD_BOOST
 
             if event.type == UPDATE_SPRITE_EVENT:
                 self.bird.sprite_frame = (self.bird.sprite_frame + 1) % len(BIRD_IMAGES)
-        
+
+    def update(self, dt: int) -> None: 
         self.bird.update(dt)
 
         for pipe in self.pipes:
@@ -124,8 +144,7 @@ class State:
         self.pipes = Pipes.despawn(self.pipes)
 
         if any(pipe.check_collision(self.bird.rect) for pipe in self.pipes):
-            self.best_score = max(self.best_score, self.score)
-            self.reset()
+            self.game_state = GameState.GAME_OVER
 
 
 class Game:
@@ -140,10 +159,26 @@ class Game:
         pygame.time.set_timer(UPDATE_SPRITE_EVENT, BIRD_ANIMATION_DELAY)
 
     def update(self) -> None:
-        self.state.update(self.dt)
+        self.state.handle_events()
+
+        match self.state.game_state:
+            case GameState.RUNNING:
+                self.state.update(self.dt)
+
         self.dt = self.clock.tick(60)
 
     def render(self) -> None:
+        match self.state.game_state:
+            case GameState.RUNNING:
+                self.render_game()
+            case GameState.WELCOME:
+                self.render_welcome()
+            case GameState.GAME_OVER:
+                self.render_game_over()
+
+        pygame.display.flip()
+
+    def render_game(self) -> None:
         self.screen.fill("lightblue")
 
         self.state.bird.render(self.screen) 
@@ -158,7 +193,11 @@ class Game:
         self.screen.blit(score, (10, 10))
         self.screen.blit(best_score, (10, 10 + FONT_SIZE))
 
-        pygame.display.flip()
+    def render_welcome(self) -> None:
+        self.screen.fill("green")
+
+    def render_game_over(self) -> None:
+        self.screen.fill("red")
 
 
 class Simulation:
