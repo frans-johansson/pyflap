@@ -1,5 +1,8 @@
+import copy
 import pathlib
 import random
+import typing
+import enum
 
 import pygame
 
@@ -80,34 +83,62 @@ class Pipes:
         return [pipe for pipe in pipes if pipe.upper.right > 0 or pipe.lower.right > 0]
 
 
-class State:
-    def __init__(self) -> None:
-        self.reset()
-        self.best_score = 0
+class GameState(enum.Enum):
+    WELCOME = enum.auto()
+    RUNNING = enum.auto()
+    GAME_OVER = enum.auto()
+    SHOULD_QUIT = enum.auto()
 
-    def reset(self) -> None:
+
+class State:
+    """
+    Member fields:
+    - best_score
+    - game_state
+    - bird
+    - pipes
+    - pipe_spawn_countup
+    - score
+    """
+    def __init__(self) -> None:
+        self.best_score = 0
+        self.game_state = GameState.WELCOME
+        self.init()
+
+    def init(self) -> None:
         self.bird = Bird.spawn()
         self.pipes = [Pipes.spawn()]
         self.pipe_spawn_countup = 0.0
         self.score = 0
-        self.running = True
 
-    def update(self, dt: int) -> None:
-        # Handle events
+    def start(self) -> None:
+        self.best_score = max(self.best_score, self.score)
+        self.game_state = GameState.RUNNING
+        self.init()
+
+    @property
+    def should_quit(self) -> bool:
+        return self.game_state == GameState.SHOULD_QUIT
+
+    def handle_events(self) -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = False
+                self.game_state = GameState.SHOULD_QUIT
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
+                    self.game_state = GameState.SHOULD_QUIT
+
+                if event.key == pygame.K_RETURN:
+                    self.start()
 
                 if event.key == pygame.K_SPACE:
                     self.bird.velocity = -BIRD_BOOST
 
             if event.type == UPDATE_SPRITE_EVENT:
                 self.bird.sprite_frame = (self.bird.sprite_frame + 1) % len(BIRD_IMAGES)
-        
+
+    def update(self, dt: int) -> None: 
         self.bird.update(dt)
 
         for pipe in self.pipes:
@@ -122,8 +153,8 @@ class State:
         self.pipes = Pipes.despawn(self.pipes)
 
         if any(pipe.check_collision(self.bird.rect) for pipe in self.pipes):
-            self.best_score = max(self.best_score, self.score)
-            self.reset()
+            print("You died")
+            self.game_state = GameState.GAME_OVER
 
 
 class Game:
@@ -138,10 +169,26 @@ class Game:
         pygame.time.set_timer(UPDATE_SPRITE_EVENT, BIRD_ANIMATION_DELAY)
 
     def update(self) -> None:
-        self.state.update(self.dt)
+        self.state.handle_events()
+
+        match self.state.game_state:
+            case GameState.RUNNING:
+                self.state.update(self.dt)
+
         self.dt = self.clock.tick(60)
 
     def render(self) -> None:
+        match self.state.game_state:
+            case GameState.RUNNING:
+                self.render_game()
+            case GameState.WELCOME:
+                self.render_welcome()
+            case GameState.GAME_OVER:
+                self.render_game_over()
+
+        pygame.display.flip()
+
+    def render_game(self) -> None:
         self.screen.fill("lightblue")
 
         self.state.bird.render(self.screen) 
@@ -156,5 +203,52 @@ class Game:
         self.screen.blit(score, (10, 10))
         self.screen.blit(best_score, (10, 10 + FONT_SIZE))
 
-        pygame.display.flip()
+    def render_welcome(self) -> None:
+        self.screen.fill("green")
+
+    def render_game_over(self) -> None:
+        self.screen.fill("red")
+
+
+def _runner(generator):
+    def _inner(*args, **kwargs):
+        gen = generator(*args, **kwargs)
+        return next(gen), gen
+    return _inner
+
+
+class Simulation:
+    def __init__(self, state: State) -> None:
+        self.state = state
+
+    @staticmethod
+    def input_key(keycode) -> bool:
+        print("Received key:", keycode)
+        event = pygame.event.Event(pygame.KEYDOWN, key=keycode)
+        return pygame.event.post(event)
+    
+    @_runner
+    def run_until_state(self, target_state: GameState, max_frames: int) -> typing.Generator: 
+        for _ in range(max_frames):
+            self.update()
+            input_key = yield copy.deepcopy(self.state)
+            if input_key is not None:
+                Simulation.input_key(input_key)
+            if self.state.game_state == target_state:
+                break
+
+    @_runner
+    def run_fixed(self, num_frames: int) -> typing.Generator:
+        for _ in range(num_frames):
+            self.update()
+            input_key = yield copy.deepcopy(self.state)
+            if input_key is not None:
+                Simulation.input_key(input_key)
+    
+    def update(self) -> None:
+        self.state.handle_events()
+        self.state.update(1000 // 60)
+    
+    def render(self) -> None:
+        pass
 

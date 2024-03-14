@@ -8,7 +8,7 @@ def main():
     state = pyflap.State()
     game = pyflap.Game(state)
 
-    while state.running:
+    while not state.should_quit:
         game.update()
         game.render()
 
