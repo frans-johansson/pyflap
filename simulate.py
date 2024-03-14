@@ -16,7 +16,7 @@ def main():
     # Since the runners are generators that accept callback values
     # we inject input by invoking `send` with a lambda that in turn
     # calls the `input_key` helper function
-    runner.send(lambda: pyflap.Simulation.input_key(pygame.K_RETURN))
+    runner.send(pygame.K_RETURN)
 
     # The runner will otherwise act as a normal iterator yielding frames
     # of state data
@@ -26,7 +26,7 @@ def main():
         print("Bird:", state.bird.rect.y)
 
     # Let's try to get the bird to jump
-    runner.send(lambda: pyflap.Simulation.input_key(pygame.K_SPACE))
+    runner.send(pygame.K_SPACE)
 
     for i, state in enumerate(runner):
         # The y coordinate should now decrease as the bird approaches the

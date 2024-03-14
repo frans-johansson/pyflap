@@ -231,9 +231,9 @@ class Simulation:
     def run_until_state(self, target_state: GameState, max_frames: int) -> typing.Generator: 
         for _ in range(max_frames):
             self.update()
-            input_callback = yield copy.deepcopy(self.state)
-            if input_callback is not None:
-                input_callback()
+            input_key = yield copy.deepcopy(self.state)
+            if input_key is not None:
+                Simulation.input_key(input_key)
             if self.state.game_state == target_state:
                 break
 
@@ -241,9 +241,9 @@ class Simulation:
     def run_fixed(self, num_frames: int) -> typing.Generator:
         for _ in range(num_frames):
             self.update()
-            input_callback = yield copy.deepcopy(self.state)
-            if input_callback is not None:
-                input_callback()
+            input_key = yield copy.deepcopy(self.state)
+            if input_key is not None:
+                Simulation.input_key(input_key)
     
     def update(self) -> None:
         self.state.handle_events()
