@@ -1,6 +1,5 @@
 import pathlib
 import random
-import typing
 
 import pygame
 
@@ -26,23 +25,74 @@ BIRD_IMAGES = [
     for file in ASSETS.glob("bird/*.png")
 ]
 
+class Bird:
+    def __init__(self, rect: pygame.Rect) -> None:
+        self.rect = rect
+        self.velocity = 0.0
+        self.sprite_frame = 0
+
+    def update(self, dt: int) -> None:
+        self.velocity += BIRD_GRAVITY * dt
+        self.rect.move_ip(0, self.velocity)
+        if self.rect.bottom > HEIGHT:
+            self.rect.bottom = HEIGHT
+        if self.rect.top < 0:
+            self.rect.top = 0
+            self.velocity = 0
+
+    def render(self, screen: pygame.Surface) -> None:
+        screen.blit(BIRD_IMAGES[self.sprite_frame], self.rect)
+
+    @classmethod
+    def spawn(cls) -> "Bird":
+        bird = pygame.Rect(0, 0, BIRD_SIZE, BIRD_SIZE)
+        bird.center = (WIDTH // 3, HEIGHT // 2)
+        return cls(bird)
+
+
+class Pipes:
+    def __init__(self, upper: pygame.Rect, lower: pygame.Rect) -> None:
+        self.upper = upper
+        self.lower = lower
+
+    def update(self, dt: int) -> None:
+        self.upper.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
+        self.lower.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
+
+    def render(self, screen: pygame.Surface) -> None:
+        pygame.draw.rect(surface=screen, color="darkgreen", rect=self.upper)
+        pygame.draw.rect(surface=screen, color="darkgreen", rect=self.lower)
+
+    def check_collision(self, other: pygame.Rect) -> bool:
+        return self.upper.colliderect(other) or self.lower.colliderect(other)
+
+    @classmethod
+    def spawn(cls) -> "Pipes":
+        height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
+        lower = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT * height_lower)
+        lower.midbottom = (WIDTH, HEIGHT)
+        upper = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT - lower.height - PIPE_GAP)
+        upper.midtop = (WIDTH, 0)
+        return cls(upper, lower)
+
+    @staticmethod
+    def despawn(pipes: list["Pipes"]) -> list["Pipes"]:
+        return [pipe for pipe in pipes if pipe.upper.right > 0 or pipe.lower.right > 0]
+
 
 class State:
-    def __init__(self):
+    def __init__(self) -> None:
         self.reset()
         self.best_score = 0
 
-    def reset(self):
-        self.bird = pygame.Rect(0, 0, BIRD_SIZE, BIRD_SIZE)
-        self.bird.center = (WIDTH // 3, HEIGHT // 2)
-        self.pipes = spawn_pipe()
-        self.bird_velocity = 0.0
+    def reset(self) -> None:
+        self.bird = Bird.spawn()
+        self.pipes = [Pipes.spawn()]
         self.pipe_spawn_countup = 0.0
         self.score = 0
-        self.bird_frame = 0
         self.running = True
 
-    def update(self, dt):
+    def update(self, dt: int) -> None:
         # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -53,31 +103,25 @@ class State:
                     self.running = False
 
                 if event.key == pygame.K_SPACE:
-                    self.bird_velocity = -BIRD_BOOST
+                    self.bird.velocity = -BIRD_BOOST
 
             if event.type == UPDATE_SPRITE_EVENT:
-                self.bird_frame = (self.bird_frame + 1) % len(BIRD_IMAGES)
-
-        self.bird_velocity += BIRD_GRAVITY * dt
-        self.bird.move_ip(0, self.bird_velocity)
-        if self.bird.bottom > HEIGHT:
-            self.bird.bottom = HEIGHT
-        if self.bird.top < 0:
-            self.bird.top = 0
-            self.bird_velocity = 0
+                self.bird.sprite_frame = (self.bird.sprite_frame + 1) % len(BIRD_IMAGES)
+        
+        self.bird.update(dt)
 
         for pipe in self.pipes:
-            pipe.move_ip(-PIPE_SCROLL_VELOCITY * dt, 0)
+            pipe.update(dt)
 
         self.pipe_spawn_countup += (dt / 1000) * PIPE_SPAWN_FREQUENCY
         if self.pipe_spawn_countup > 1:
-            self.pipes.extend(spawn_pipe())
+            self.pipes.append(Pipes.spawn())
             self.score += 1
             self.pipe_spawn_countup = 0
 
-        self.pipes = despawn_pipes(self.pipes)
+        self.pipes = Pipes.despawn(self.pipes)
 
-        if bird_has_crashed(self.pipes, self.bird):
+        if any(pipe.check_collision(self.bird.rect) for pipe in self.pipes):
             self.best_score = max(self.best_score, self.score)
             self.reset()
 
@@ -100,10 +144,10 @@ class Game:
     def render(self) -> None:
         self.screen.fill("lightblue")
 
-        self.screen.blit(BIRD_IMAGES[self.state.bird_frame], self.state.bird)
+        self.state.bird.render(self.screen) 
 
         for pipe in self.state.pipes:
-            pygame.draw.rect(surface=self.screen, color="darkgreen", rect=pipe)
+            pipe.render(self.screen)
 
         score = self.font.render(f"Score: {self.state.score}", True, "black")
         best_score = self.font.render(
@@ -114,27 +158,3 @@ class Game:
 
         pygame.display.flip()
 
-
-def spawn_pipe() -> list[pygame.Rect]:
-    height_lower = random.uniform(0, (HEIGHT - PIPE_GAP) / HEIGHT)
-    lower = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT * height_lower)
-    lower.midbottom = (WIDTH, HEIGHT)
-    upper = pygame.Rect(0, 0, PIPE_WIDTH, HEIGHT - lower.height - PIPE_GAP)
-    upper.midtop = (WIDTH, 0)
-    return [lower, upper]
-
-
-def despawn_pipes(pipes: list[pygame.Rect]) -> list[pygame.Rect]:
-    return [pipe for pipe in pipes if pipe.right > 0]
-
-
-def bird_has_crashed(pipes: list[pygame.Rect], bird: pygame.Rect) -> bool:
-    # Enable this if you are a masochist c:
-    # if bird.bottom > HEIGHT or bird.top < 0:
-    #     return True
-
-    for pipe in pipes:
-        if pipe.colliderect(bird):
-            return True
-
-    return False
